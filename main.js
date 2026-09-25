@@ -6,17 +6,6 @@ const { autoUpdater } = require('electron-updater');
 
 const isDev = !app.isPackaged;
 
-if (app.isPackaged) {
-  const installDir = path.dirname(app.getPath('exe'));
-  const dataDir = path.join(installDir, 'data');
-  try {
-    fs.mkdirSync(dataDir, { recursive: true });
-    app.setPath('userData', dataDir);
-  } catch (e) {
-    console.error('[MemoryEarth] 数据目录设置失败：', e.message);
-  }
-}
-
 let win = null;
 let db = null;
 let DB_PATH = '';
@@ -243,6 +232,61 @@ async function initDB() {
   }
 
   saveDB();
+}
+
+// ============================================================
+// 数据迁移：旧版数据在安装目录下，新版迁到系统 userData
+// ============================================================
+function copyDirRecursive(src, dst) {
+  fs.mkdirSync(dst, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const s = path.join(src, entry.name);
+    const d = path.join(dst, entry.name);
+    if (entry.isDirectory()) copyDirRecursive(s, d);
+    else if (entry.isFile() && !fs.existsSync(d)) fs.copyFileSync(s, d);
+  }
+}
+
+function migrateLegacyDataIfNeeded() {
+  const appDataDir = app.getPath('userData');
+  const appDataDB = path.join(appDataDir, 'memory.db');
+
+  // 已有数据，不迁移
+  if (fs.existsSync(appDataDB)) return;
+  if (!app.isPackaged) return;
+
+  // 检查旧的安装目录
+  const installDir = path.dirname(app.getPath('exe'));
+  const legacyDir = path.join(installDir, 'data');
+  const legacyDB = path.join(legacyDir, 'memory.db');
+  if (!fs.existsSync(legacyDB)) return;
+
+  console.log('[MemoryEarth] 检测到旧版数据，开始迁移');
+  console.log('  源：', legacyDir);
+  console.log('  目标：', appDataDir);
+
+  try {
+    fs.mkdirSync(appDataDir, { recursive: true });
+    fs.copyFileSync(legacyDB, appDataDB);
+
+    for (const name of ['settings.json', 'draft.json']) {
+      const src = path.join(legacyDir, name);
+      const dst = path.join(appDataDir, name);
+      if (fs.existsSync(src) && !fs.existsSync(dst)) {
+        fs.copyFileSync(src, dst);
+      }
+    }
+
+    const legacyPhotos = path.join(legacyDir, 'photos');
+    const targetPhotos = path.join(appDataDir, 'photos');
+    if (fs.existsSync(legacyPhotos)) {
+      copyDirRecursive(legacyPhotos, targetPhotos);
+    }
+
+    console.log('[MemoryEarth] 数据迁移完成');
+  } catch (e) {
+    console.error('[MemoryEarth] 数据迁移失败：', e.message);
+  }
 }
 
 function insertDefaultPlaceIfNeeded() {
@@ -817,6 +861,8 @@ function registerIPC() {
 
 // ---------- 生命周期 ----------
 app.whenReady().then(async () => {
+  migrateLegacyDataIfNeeded();   // ← 加这一行，必须在 loadSettings 之前
+
   settings = loadSettings();
   if (!settings.mediaDir || !settings.mediaDir.trim()) {
     settings.mediaDir = path.join(app.getPath('userData'), 'photos');

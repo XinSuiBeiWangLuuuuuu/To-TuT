@@ -1,0 +1,14 @@
+node_modules/
+dist/
+release/
+data/
+*.db
+*.db-wal
+*.db-shm
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*

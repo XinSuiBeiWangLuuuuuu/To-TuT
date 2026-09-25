@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>回忆地球</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="cesiumContainer"></div>
+
+    <!-- 左侧目录栏 -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title" id="sidebarTitle">📁 我的目录</span>
+        <div class="sidebar-actions">
+          <button id="multiSelectBtn" class="icon-btn" title="批量管理">☑</button>
+          <button id="addCategoryBtn" class="icon-btn" title="新建分类">+</button>
+        </div>
+      </div>
+      <div id="addCategoryRow" class="add-cat-row hidden">
+        <input id="newCatName" type="text" placeholder="分类名称，回车确认" />
+      </div>
+      <div id="categoryList" class="category-list"></div>
+      <div id="bulkBar" class="bulk-bar hidden">
+        <div class="bulk-info">已选 <span id="bulkCount">0</span> 项</div>
+        <div class="bulk-actions">
+          <button id="bulkSelectAll" class="bulk-btn">全选</button>
+          <button id="bulkCancel" class="bulk-btn">取消</button>
+          <button id="bulkDelete" class="bulk-btn danger" disabled>删除</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 顶部搜索 -->
+    <div class="topbar">
+      <input id="searchInput" type="text" placeholder="搜索国内地点或国外城市…" autocomplete="off" />
+      <button id="searchBtn">搜索</button>
+      <div id="searchResults" class="results hidden"></div>
+    </div>
+
+    <!-- 右上角地图工具 -->
+    <div class="map-tools">
+      <button id="randomBtn" class="map-tool-btn" title="随机穿越到一段回忆">
+        <span>🎲</span><span class="map-tool-label">随机回忆</span>
+      </button>
+      <button id="trailBtn" class="map-tool-btn" title="用线条连起所有地点">
+        <span>✨</span><span class="map-tool-label">轨迹线</span>
+      </button>
+      <button id="lightingBtn" class="map-tool-btn" title="开启昼夜效果">
+        <span>🌗</span><span class="map-tool-label">昼夜</span>
+      </button>
+      <button id="musicBtn" class="map-tool-btn" title="软件背景音乐">
+        <span>🎵</span><span class="map-tool-label">音乐</span>
+      </button>
+    </div>
+
+    <!-- 底部地点面板（弹窗） -->
+    <aside id="placePanel" class="bottom-panel hidden">
+      <div class="panel-header">
+        <div class="header-left">
+          <button id="favBtn" class="fav-btn" title="收藏">☆</button>
+          <input id="placeName" class="place-name" type="text" placeholder="地点名称" />
+          <span id="placeCoord" class="place-coord"></span>
+        </div>
+        <div class="header-right">
+          <span id="saveStatus" class="save-status"></span>
+          <button id="expandBtn" class="header-btn" title="展开/收起">⛶</button>
+          <button id="closePanel" class="header-btn close-btn" title="关闭">×</button>
+        </div>
+      </div>
+
+      <div class="panel-toolbar">
+        <div class="toolbar-category">
+          <span class="toolbar-label">分类</span>
+          <select id="placeCategory" class="place-category">
+            <option value="">未分类</option>
+          </select>
+        </div>
+        <span class="toolbar-sep-v"></span>
+        <div class="editor-toolbar">
+          <button class="toolbar-btn" data-cmd="bold" title="加粗 (Ctrl+B)"><b>B</b></button>
+          <button class="toolbar-btn" data-cmd="italic" title="斜体 (Ctrl+I)"><i>I</i></button>
+          <button class="toolbar-btn" data-cmd="underline" title="下划线"><u>U</u></button>
+          <button class="toolbar-btn" data-cmd="formatBlock" data-value="h3" title="标题">H</button>
+          <button class="toolbar-btn" data-cmd="formatBlock" data-value="blockquote" title="引用">❝</button>
+          <button class="toolbar-btn" data-cmd="insertUnorderedList" title="项目符号">•</button>
+          <button class="toolbar-btn" data-cmd="insertHorizontalRule" title="分隔线">—</button>
+          <span class="toolbar-sep"></span>
+          <button id="insertImageBtn" class="toolbar-btn" title="插入图片">📷</button>
+          <button id="insertVideoBtn" class="toolbar-btn" title="插入视频">🎬</button>
+          <span class="toolbar-sep"></span>
+          <div class="template-wrap">
+            <button id="templateBtn" class="toolbar-btn" title="插入模板">📝 模板</button>
+            <div id="templateMenu" class="template-menu hidden">
+              <div class="template-item" data-tpl="travel">🗺️ 旅行游记</div>
+              <div class="template-item" data-tpl="food">🍽️ 美食探店</div>
+              <div class="template-item" data-tpl="walk">🚶 散步随记</div>
+              <div class="template-item" data-tpl="milestone">💖 纪念日</div>
+            </div>
+          </div>
+          <button id="historyBtn" class="toolbar-btn" title="历史版本">⏱ 历史</button>
+          <span class="toolbar-sep"></span>
+          <button id="deletePlaceBtn" class="toolbar-btn danger" title="删除地点">🗑 删除</button>
+          <button id="saveBtn" class="toolbar-btn primary" title="保存 (Ctrl+S)">保存</button>
+        </div>
+      </div>
+
+      <div id="placeBgmBar" class="place-bgm-bar hidden">
+        <span class="bgm-icon">🎵</span>
+        <span class="bgm-name" id="placeBgmName"></span>
+        <button id="changePlaceBgmBtn" class="bgm-action">更换</button>
+        <button id="clearPlaceBgmBtn" class="bgm-action danger">移除</button>
+      </div>
+
+      <div
+        id="contentEditor"
+        class="content-editor"
+        contenteditable="true"
+        data-placeholder="✍️ 写下你在这里的故事… 可以插入照片、视频，像写一篇游记一样。"
+      ></div>
+    </aside>
+
+    <!-- 历史版本弹窗 -->
+    <div id="historyModal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <span>⏱ 历史版本</span>
+          <button id="historyClose" class="close-btn" style="position:static">×</button>
+        </div>
+        <div id="historyList" class="history-list"></div>
+      </div>
+    </div>
+
+    <!-- 首次启动的名字弹窗 -->
+    <div id="nameModal" class="name-modal hidden">
+      <div class="name-box">
+        <div class="name-emoji">🌍</div>
+        <h1>欢迎来到回忆地球</h1>
+        <p class="name-sub">先给自己取一个名字吧，它会出现在你的目录里。</p>
+        <input id="nameInput" type="text" maxlength="20" placeholder="你的名字，比如：小明 / Alice" autocomplete="off" />
+        <button id="nameSubmit" class="name-submit">开始我的旅程</button>
+        <p class="name-tip">之后可以从菜单「帮助 → 重新设置名字」修改</p>
+      </div>
+    </div>
+
+    <!-- 里程碑彩蛋 -->
+    <div id="celebrateModal" class="celebrate-modal hidden">
+      <div class="celebrate-box">
+        <div class="celebrate-emoji" id="celebrateEmoji">🌱</div>
+        <div class="celebrate-count" id="celebrateCount"></div>
+        <h1 class="celebrate-title" id="celebrateTitle"></h1>
+        <p class="celebrate-text" id="celebrateText"></p>
+        <button id="celebrateClose" class="celebrate-btn">继续</button>
+      </div>
+    </div>
+
+    <!-- 新手教程 -->
+    <div id="tutorialModal" class="tutorial-modal hidden">
+      <div class="tutorial-box">
+        <div class="tutorial-header">
+          <span class="tutorial-step" id="tutorialStep">1 / 7</span>
+          <button id="tutorialSkip" class="tutorial-skip">跳过</button>
+        </div>
+        <div class="tutorial-body">
+          <div class="tutorial-page" data-page="0">
+            <div class="tutorial-emoji">🌍</div>
+            <h2>欢迎使用「回忆地球」</h2>
+            <p>这是一个用来记录旅行记忆的 3D 地球相册。</p>
+            <p>在地球上点一下选个位置，双击打开编辑框，就能把照片、视频、文字都保存到这里。</p>
+            <p class="tutorial-tip">下面花 30 秒了解一下界面和用法。</p>
+          </div>
+          <div class="tutorial-page hidden" data-page="1">
+            <div class="tutorial-emoji">🖱️</div>
+            <h2>和地球互动</h2>
+            <ul class="tutorial-list">
+              <li><b>左键拖动空白处</b>：旋转地球</li>
+              <li><b>滚轮</b>：放大 / 缩小</li>
+              <li><b>单击空白处</b>：选中那个位置，青色点显示地名（<b>不会立刻弹窗</b>）</li>
+              <li><b>双击空白处</b>：打开编辑框，添加新地点</li>
+              <li><b>右键空白处</b>：弹出菜单，也可以选「在此新增地点」</li>
+              <li><b>单击红色标记</b>：打开编辑框，查看已有的地点</li>
+              <li><b>按住红色标记拖动</b>：移动它到新位置，松手后自动保存</li>
+            </ul>
+          </div>
+          <div class="tutorial-page hidden" data-page="2">
+            <div class="tutorial-emoji">🔍</div>
+            <h2>搜索地点</h2>
+            <p>顶部中央是搜索框，支持中文和英文。</p>
+            <ul class="tutorial-list">
+              <li>🇨🇳 前缀：来自高德的国内地点</li>
+              <li>🌍 前缀：来自 Open-Meteo 的国外城市</li>
+              <li>点任意结果，镜头会飞过去</li>
+              <li>想把这个位置记下来？双击地图上那个位置就行</li>
+            </ul>
+          </div>
+          <div class="tutorial-page hidden" data-page="3">
+            <div class="tutorial-emoji">📁</div>
+            <h2>左侧目录：分类管理</h2>
+            <ul class="tutorial-list">
+              <li><b>点 +</b>：新建分类</li>
+              <li><b>单击分类名</b>：地图飞到该分类下所有地点</li>
+              <li><b>单击地点名</b>：飞到那里并打开编辑框</li>
+              <li><b>双击分类名</b>：就地重命名</li>
+              <li><b>右键分类名</b>：重命名、删除、新建分类</li>
+              <li><b>右键地点名</b>：打开编辑、重命名、删除</li>
+              <li><b>点 ☑</b>：批量删除模式</li>
+            </ul>
+          </div>
+          <div class="tutorial-page hidden" data-page="4">
+            <div class="tutorial-emoji">✍️</div>
+            <h2>写你的故事</h2>
+            <p>双击地图或点已有标记，会弹出一个居中的编辑框。</p>
+            <ul class="tutorial-list">
+              <li>顶部：<b>☆ 收藏</b>、地点名、经纬度、<b>⛶ 展开</b>、<b>× 关闭</b></li>
+              <li>工具栏：分类、格式、插入图片和视频、模板、历史</li>
+              <li>编辑器：内容自动保存，图片下可写说明</li>
+              <li>粘贴或拖拽图片、视频直接进编辑器</li>
+              <li>可以给这个地点配一段背景音乐（本地 mp3）</li>
+            </ul>
+          </div>
+          <div class="tutorial-page hidden" data-page="5">
+            <div class="tutorial-emoji">📝</div>
+            <h2>草稿机制</h2>
+            <p>新地点在你点「保存为地点」之前，都是一份草稿。</p>
+            <ul class="tutorial-list">
+              <li>编辑过程中随时关掉弹窗，内容都会<b>自动存为草稿</b>，不会丢</li>
+              <li>下次双击地球，会恢复上次的草稿内容，并使用新的位置</li>
+              <li>点<b>「丢弃草稿」</b>就清空</li>
+              <li>点<b>「保存为地点」</b>才正式写进数据库</li>
+              <li><b>Ctrl + S</b> 快速保存</li>
+            </ul>
+          </div>
+          <div class="tutorial-page hidden" data-page="6">
+            <div class="tutorial-emoji">🎲</div>
+            <h2>小玩意儿</h2>
+            <ul class="tutorial-list">
+              <li>右上角 <b>🎲 随机回忆</b>：跳到一段随机记忆</li>
+              <li>右上角 <b>✨ 轨迹线</b>：所有地点连成一条亮线</li>
+              <li>右上角 <b>🌗 昼夜</b>：切换到真实昼夜光照</li>
+              <li>右上角 <b>🎵 音乐</b>：选一首软件背景音乐（本地 mp3）</li>
+              <li>编辑框里的 <b>☆</b>：收藏这个地点，红点会变金色</li>
+              <li>启动时如果"去年今日"有记录，地球会自己飞过去</li>
+            </ul>
+            <p class="tutorial-tip">随时可以从菜单 帮助 → 新手教程 再打开这个指南。</p>
+          </div>
+        </div>
+        <div class="tutorial-footer">
+          <button id="tutorialPrev" class="tutorial-btn">上一页</button>
+          <div class="tutorial-dots" id="tutorialDots"></div>
+          <button id="tutorialNext" class="tutorial-btn primary">下一页</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="updateBar" class="update-bar hidden">
+      <span id="updateText"></span>
+      <button id="updateAction" class="update-action hidden">立即重启</button>
+      <button id="updateClose" class="update-close">×</button>
+    </div>
+
+    <script type="module" src="/src/app.js"></script>
+  </body>
+</html>ss

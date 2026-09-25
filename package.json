@@ -1,0 +1,63 @@
+{
+  "name": "memory-earth",
+  "version": "1.0.0",
+  "description": "回忆地球 —— 你的专属旅行记忆地图",
+  "main": "main.js",
+  "author": "心碎备忘录",
+  "license": "MIT",
+  "scripts": {
+    "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env ELECTRON_DEV=1 electron .\"",
+    "build": "vite build",
+    "dist": "npm run build && electron-builder --win --x64",
+    "dist:publish": "npm run build && electron-builder --win --x64 --publish always"
+  },
+  "dependencies": {
+    "cesium": "^1.117.0",
+    "electron-updater": "^6.2.1",
+    "sql.js": "^1.11.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^30.0.6",
+    "electron-builder": "^24.13.3",
+    "vite": "^5.3.1",
+    "vite-plugin-cesium": "^1.2.23",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.yourname.memoryearth",
+    "productName": "MemoryEarth",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "dist/**/*",
+      "package.json",
+      "node_modules/sql.js/**/*"
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "XinSuiBeiWangLuuuuuu",
+      "repo": "To-TuT",
+      "releaseType": "release"
+    },
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "回忆地球",
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    }
+  }
+}

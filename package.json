@@ -1,7 +1,7 @@
 {
   "name": "memory-earth",
-  "version": "1.0.0",
-  "description": "回忆地球 —— 你的专属旅行记忆地图",
+  "version": "1.0.1",
+  "description": "回忆备忘录 —— 你的专属旅行记忆地图",
   "main": "main.js",
   "author": "心碎备忘录",
   "license": "MIT",
